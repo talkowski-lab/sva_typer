@@ -78,13 +78,19 @@ impl HMMBuildSettings {
 impl Default for HMMBuildSettings {
     fn default() -> Self {
         HMMBuildSettings::new(
-            0.9, 0.04, 0.05, 
-            0.1, 0.9, 0.9, 0.9).unwrap()
+            0.9, 
+            0.04,
+            0.05, 
+            0.1,
+            0.9, 
+            0.9, 
+            0.9
+        ).unwrap()
     }
 }
 
 #[allow(non_snake_case)]
-pub fn create_HMM_from_motifs(motifs: Vec<&str>, motifnames: Vec<&str>, settings: HMMBuildSettings, loop_name: &str) -> HMM {
+pub fn create_HMM_from_motifs(motifs: Vec<&str>, motifnames: Vec<&str>, settings: &HMMBuildSettings, loop_name: &str) -> HMM {
     // TODO: Add skip motif
     
     let mut motif_hmms = zip(motifs, motifnames)
@@ -100,7 +106,7 @@ pub fn create_HMM_from_motifs(motifs: Vec<&str>, motifnames: Vec<&str>, settings
 }
 
 #[allow(non_snake_case)]
-pub fn create_pHMM(seq: &[u8], settings: HMMBuildSettings, prefix: Option<&str>) -> HMM {
+pub fn create_pHMM(seq: &[u8], settings: &HMMBuildSettings, prefix: Option<&str>) -> HMM {
     let mut hmm = HMM::new();
 
     let prefix = match prefix {
@@ -199,10 +205,11 @@ pub fn create_pHMM(seq: &[u8], settings: HMMBuildSettings, prefix: Option<&str>)
         ],
         vec![1.0 - settings.match_to_ins, 1.0 - settings.ins_extend, 1.0],
     ));
+    hmm.order_states();
     hmm
 }
 
-pub fn create_skip_state(settings: HMMBuildSettings, prefix: Option<&str>) -> HMM {
+pub fn create_skip_state(settings: &HMMBuildSettings, prefix: Option<&str>) -> HMM {
     let mut hmm = HMM::new();
 
     let prefix = match prefix {
@@ -230,6 +237,7 @@ pub fn create_skip_state(settings: HMMBuildSettings, prefix: Option<&str>) -> HM
             vec![format!("{prefix}skip_state")],
             vec![1.0-settings.skip_to_skip]
     ));
+    hmm.order_states();
 
     hmm
 
@@ -263,6 +271,7 @@ pub fn append_HMM(hmms: Vec<HMM>) -> HMM {
             new_hmm.add_state(new_state);
         }
     }
+    new_hmm.order_states();
     new_hmm
 }
 
@@ -310,11 +319,13 @@ pub fn parallelize_HMM(hmms: Vec<HMM>, region_prefix: &str) -> HMM {
         all_ends.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
         vec![1.0; all_ends.len()]
     ));
+    new_hmm.order_states();
     new_hmm
 }
 
 #[allow(non_snake_case)]
 pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, loop_p: f64) {
+    // TODO: Add skip state option, since it has to be in the opposite orientation
     let loop_prefix = if loop_prefix.ends_with('_') {
         loop_prefix.to_string()
     } else {
@@ -348,6 +359,7 @@ pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, loop_p: f64) {
             )
         }
     }
+    hmm.order_states();
 }
 
 #[cfg(test)]
@@ -359,7 +371,7 @@ mod tests {
     fn build_test() {
         let seq = sequence_to_bytes("AC");
         let settings = HMMBuildSettings::default();
-        let hmm = create_pHMM(&seq, settings, Some("test"));
+        let hmm = create_pHMM(&seq, &settings, Some("test"));
         // panic!("States: {:?}", hmm.states);
         assert_eq!(hmm.states.len(), (3 * seq.len() - 1) + 2);
     }
@@ -367,7 +379,7 @@ mod tests {
     fn valid_hmm() {
         let seq = sequence_to_bytes("ACGT");
         let settings = HMMBuildSettings::default();
-        let hmm = create_pHMM(&seq, settings, Some("test"));
+        let hmm = create_pHMM(&seq, &settings, Some("test"));
 
         hmm.check_valid();
     }
@@ -375,7 +387,7 @@ mod tests {
     #[test]
     fn skip_state_valid() {
         let settings = HMMBuildSettings::default();
-        let hmm = create_skip_state(settings, Some("test"));
+        let hmm = create_skip_state(&settings, Some("test"));
         hmm.check_valid();
     }
 
@@ -386,7 +398,7 @@ mod tests {
         let hmm = create_HMM_from_motifs(
             vec!["ACGTG", "GTAAG", "GAACT"],
             vec!["Rep1", "Rep2", "Rep3"],
-            settings,
+            &settings,
             "test"
         );
         hmm.check_valid();
@@ -396,10 +408,11 @@ mod tests {
     fn query_test() {
         let seq = sequence_to_bytes("ACGT");
         let settings = HMMBuildSettings::default();
-        let mut hmm = create_pHMM(&seq, settings, Some("test"));
+        let hmm = create_pHMM(&seq, &settings, Some("test"));
         let query = sequence_to_bytes("AGTTTGT");
         let result = hmm.query(&query);
-        pprint_intervals(result);
+        let mut writer = std::io::stdout();
+        pprint_intervals(&mut writer, result);
         panic!();
     }
 
@@ -407,16 +420,17 @@ mod tests {
     fn complex_query_test() {
         let settings = HMMBuildSettings::default();
 
-        let mut hmm = create_HMM_from_motifs(
+        let hmm = create_HMM_from_motifs(
             vec!["ACG", "GTA", "TCC"],
             vec!["Rep1", "Rep2", "Rep3"],
-            settings,
+            &settings,
             "test"
         );
 
         let query = sequence_to_bytes("ACGACGGTAACGTCCTCCTTCC");
         let result = hmm.query(&query);
-        pprint_intervals(result);
+        let mut writer = std::io::stdout();
+        pprint_intervals(&mut writer, result);
         panic!();
 
     }
@@ -427,15 +441,16 @@ mod tests {
 
         let motifs = vec!["ACGTGCGAT", "GTAACGAG", "GAAGCTACT"];
 
-        let mut hmm = create_HMM_from_motifs(
+        let hmm = create_HMM_from_motifs(
             motifs.clone(),
             vec!["Rep1", "Rep2", "Rep3"],
-            settings,
+            &settings,
             "test"
         );
         let query = sequence_to_bytes(&format!("{}{}{}{}{}{}{}{}{}", motifs[0], motifs[0], "ATGATCGATTTGTAAACTACTGGGACCCTGT", motifs[0], motifs[1], motifs[2], motifs[1], motifs[2], motifs[1]));
         let result = hmm.query(&query);
-        pprint_intervals(result);
+        let mut writer = std::io::stdout();
+        pprint_intervals(&mut writer, result);
         panic!();
 
     }

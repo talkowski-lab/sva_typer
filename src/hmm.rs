@@ -116,7 +116,11 @@ impl HMM {
         self.check_valid_transitions();
     }
 
-    fn order_states(&mut self) {
+    /// Properly orders the nonemitting states of the HMM so that their viterbi scores are
+    /// calculated after their previous states
+    ///
+    /// Make sure this is called after creating an HMM or the probabilities might get messed up
+    pub fn order_states(&mut self) {
         let pos_map = self.get_index_map();
         let copy = self.states.clone();
         let mut normal_states: Vec<String> = Vec::new();
@@ -158,11 +162,13 @@ impl HMM {
         }
     }
 
-    pub fn query(&mut self, query: &[u8]) -> Vec<(&str, Interval)> {
+    /// 
+    /// States MUST be in order using self.order_states() beforehand. Otherwise the log
+    /// probabilities for the nonemitting states will get messed up. This is so self can be passed
+    /// as a immutable reference making it easier for parallelization
+    /// * `query`: 
+    pub fn query(&self, query: &[u8]) -> Vec<(&str, Interval)> {
     // pub fn query(&mut self, query: &[u8]) -> (Vec<&str>, Vec<usize>) {
-        // Should this be separate? So that you don't have to do a mutable borrow, especially if
-        // you want to parallelize running a bunch of queries
-        self.order_states();
         let start_state = self.get_start_states()[0];
         let end_state = self.get_end_states()[0];
         let (_lp_mat, trace_mat) = self.gen_viterbi_mats(query, start_state);
