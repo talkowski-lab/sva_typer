@@ -21,7 +21,7 @@ fn run(args: Args) -> Result<()> {
         let record = record?;
         let query = std::str::from_utf8(record.seq()).unwrap().to_uppercase();
         let mut result = hmm.query(&sequence_to_bytes(&query));
-        sva::trim_loop_intervals(&mut result);
+        // sva::trim_loop_intervals(&mut result);
         tsvprint_intervals(&mut writer,record.id(), result)?;
     }
     Ok(())

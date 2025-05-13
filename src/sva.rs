@@ -25,7 +25,12 @@ pub fn gen_sva_model(settings: &HMMBuildSettings) -> HMM {
         settings,
         "VNTR_region"
     );
-    append_HMM(vec![hexamer_hmm, vntr_hmm])
+
+    let skip1 = create_skip_state(settings, Some("skip1"));
+    let skip2 = create_skip_state(settings, Some("skip2"));
+    let skip3 = create_skip_state(settings, Some("skip3"));
+
+    append_HMM(vec![skip1, hexamer_hmm, skip2, vntr_hmm, skip3])
 }
 
 pub fn trim_loop_intervals(final_intervals: &mut Vec<(&str, Interval)>) {
@@ -93,9 +98,9 @@ mod tests {
         let hmm = gen_sva_model(&settings);
         hmm.check_valid();
         let mut result = hmm.query(&sequence_to_bytes(SVA_F_SEQ));
-        trim_loop_intervals(&mut result);
+        // trim_loop_intervals(&mut result);
         let mut writer = std::io::stdout();
         pprint_intervals(&mut writer, result);
-        panic!();
+        // panic!();
     }
 }

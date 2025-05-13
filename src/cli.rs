@@ -69,6 +69,15 @@ pub struct Args {
 
     )]
     pub loop_prob: f64,
+    /// Probability of loop repeating
+    #[arg(
+        long,
+        default_value_t = HMMBuildSettings::default().loop_prob,
+        value_parser=between_0_1_parser,
+        help_heading = "HMM Build Parameters",
+
+    )]
+    pub enter_skip_loop: f64,
     /// Probability of skip state continuing
     #[arg(
         long,
@@ -101,6 +110,7 @@ impl TryFrom<&Args> for HMMBuildSettings {
             value.ins_extend,
             value.del_extend,
             value.loop_prob,
+            value.enter_skip_loop,
             value.skip_to_skip,
             value.match_emit_correct,
         )

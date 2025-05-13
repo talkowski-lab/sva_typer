@@ -16,6 +16,7 @@ pub struct HMMBuildSettings {
     pub ins_extend: f64,
     pub del_extend: f64,
     pub loop_prob: f64,
+    pub enter_skip_loop: f64,
     pub skip_to_skip: f64,
     pub match_emit_correct: f64,
 }
@@ -27,6 +28,7 @@ impl HMMBuildSettings {
         ins_extend: f64,
         del_extend: f64,
         loop_prob: f64,
+        enter_skip_loop: f64,
         skip_to_skip: f64,
         match_emit_correct: f64,
     ) -> Result<Self, HMMBuildError> {
@@ -62,6 +64,7 @@ impl HMMBuildSettings {
             ins_extend,
             del_extend,
             loop_prob,
+            enter_skip_loop,
             skip_to_skip,
             match_emit_correct,
         })
@@ -83,6 +86,7 @@ impl Default for HMMBuildSettings {
             0.05, 
             0.1,
             0.9, 
+            0.05,
             0.9, 
             0.9
         ).unwrap()
@@ -91,17 +95,16 @@ impl Default for HMMBuildSettings {
 
 #[allow(non_snake_case)]
 pub fn create_HMM_from_motifs(motifs: Vec<&str>, motifnames: Vec<&str>, settings: &HMMBuildSettings, loop_name: &str) -> HMM {
-    // TODO: Add skip motif
     
-    let mut motif_hmms = zip(motifs, motifnames)
+    let motif_hmms = zip(motifs, motifnames)
         .map(|(s, m)| create_pHMM(
                 &sequence_to_bytes(s), settings, Some(m)
         ))
         .collect::<Vec<_>>();
     // Now add skip state
-    motif_hmms.push(create_skip_state(settings, Some(loop_name)));
+    // motif_hmms.push(create_skip_state(settings, Some(loop_name)));
     let mut hmm = parallelize_HMM(motif_hmms, &format!("{loop_name}_loop"));
-    loop_HMM(&mut hmm, loop_name, settings.loop_prob);
+    loop_HMM(&mut hmm, loop_name, settings, true);
     hmm
 }
 
@@ -324,8 +327,10 @@ pub fn parallelize_HMM(hmms: Vec<HMM>, region_prefix: &str) -> HMM {
 }
 
 #[allow(non_snake_case)]
-pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, loop_p: f64) {
-    // TODO: Add skip state option, since it has to be in the opposite orientation
+pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, settings: &HMMBuildSettings, skip_loop: bool) {
+
+
+    //TODO: Actually incorporate skip_loop
     let loop_prefix = if loop_prefix.ends_with('_') {
         loop_prefix.to_string()
     } else {
@@ -335,6 +340,11 @@ pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, loop_p: f64) {
     let start_state_id = hmm.get_start_states()[0].to_string();
     let end_state_id = hmm.get_end_states()[0].to_string();
 
+    let mut skip = create_skip_state(settings, Some(loop_prefix.as_str()));
+    let skip_start_id = skip.get_start_states()[0].to_string();
+    let skip_end_id = skip.get_end_states()[0].to_string();
+
+
     hmm.add_state(HMMState::empty_state(
         format!("{loop_prefix}start")
     ));
@@ -343,22 +353,39 @@ pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, loop_p: f64) {
         format!("{loop_prefix}end"),
         None,
         vec![end_state_id.clone()],
-        vec![1.0-loop_p]
+        vec![1.0-settings.loop_prob]
     ));
-    for state in hmm.states.iter_mut() {
-        if state.identifier == start_state_id {
-            state.set_transitions(
-                vec![
-                    format!("{loop_prefix}start"),
-                    end_state_id.clone()
-                ],
-                vec![
-                    1.0,
-                    loop_p
-                ]
-            )
-        }
+    let start_state = hmm.states.iter_mut().find(|s|
+        s.identifier == start_state_id
+    ).expect("Could not find start state");
+
+    start_state.set_transitions(
+        vec![
+            format!("{loop_prefix}start"),
+            end_state_id.clone(),
+            skip_end_id.clone()
+        ],
+        vec![
+            1.0,
+            settings.loop_prob * (1.0- settings.enter_skip_loop),
+            1.0
+        ]
+    );
+
+    // Now add in the skip state
+    let skip_start = skip.states.iter_mut().find(|s|
+        s.identifier == skip_start_id
+    ).expect("Could not find loop start state");
+
+    skip_start.set_transitions(
+        vec![end_state_id.clone()],
+        vec![settings.loop_prob * settings.enter_skip_loop]
+    );
+
+    for state in skip.states {
+        hmm.states.push(state);
     }
+
     hmm.order_states();
 }
 
@@ -413,7 +440,7 @@ mod tests {
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
         pprint_intervals(&mut writer, result);
-        panic!();
+        // panic!();
     }
 
     #[test]
@@ -431,7 +458,7 @@ mod tests {
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
         pprint_intervals(&mut writer, result);
-        panic!();
+        // panic!();
 
     }
 
@@ -451,7 +478,7 @@ mod tests {
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
         pprint_intervals(&mut writer, result);
-        panic!();
+        // panic!();
 
     }
 }
