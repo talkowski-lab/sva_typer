@@ -330,7 +330,7 @@ pub fn parallelize_HMM(hmms: Vec<HMM>, region_prefix: &str) -> HMM {
 pub fn loop_HMM(hmm: &mut HMM, loop_prefix: &str, settings: &HMMBuildSettings, skip_loop: bool) {
 
 
-    //TODO: Actually incorporate skip_loop
+    //TODO: Actually incorporate skip_loop, right now defaults to true
     let loop_prefix = if loop_prefix.ends_with('_') {
         loop_prefix.to_string()
     } else {
@@ -439,7 +439,7 @@ mod tests {
         let query = sequence_to_bytes("AGTTTGT");
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
-        pprint_intervals(&mut writer, result);
+        // pprint_intervals(&mut writer, result);
         // panic!();
     }
 
@@ -457,7 +457,7 @@ mod tests {
         let query = sequence_to_bytes("ACGACGGTAACGTCCTCCTTCC");
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
-        pprint_intervals(&mut writer, result);
+        // pprint_intervals(&mut writer, result);
         // panic!();
 
     }
@@ -477,7 +477,7 @@ mod tests {
         let query = sequence_to_bytes(&format!("{}{}{}{}{}{}{}{}{}", motifs[0], motifs[0], "ATGATCGATTTGTAAACTACTGGGACCCTGT", motifs[0], motifs[1], motifs[2], motifs[1], motifs[2], motifs[1]));
         let result = hmm.query(&query);
         let mut writer = std::io::stdout();
-        pprint_intervals(&mut writer, result);
+        // pprint_intervals(&mut writer, result);
         // panic!();
 
     }

@@ -100,7 +100,7 @@ mod tests {
         let mut result = hmm.query(&sequence_to_bytes(SVA_F_SEQ));
         // trim_loop_intervals(&mut result);
         let mut writer = std::io::stdout();
-        pprint_intervals(&mut writer, result);
+        // pprint_intervals(&mut writer, result);
         // panic!();
     }
 }

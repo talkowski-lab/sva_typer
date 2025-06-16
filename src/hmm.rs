@@ -23,15 +23,37 @@ impl HMMState {
         prev_states: Vec<String>,
         prev_state_transitions: Vec<f64>,
     ) -> Self {
+        Self::new_with_logprob(
+            identifier,
+            emission.map(|v| v.iter().map(|p| p.ln()).collect()),
+            prev_states,
+            prev_state_transitions.iter().map(|p|p.ln()).collect()
+        )
+    }
+
+    /// Generates HMM State (ASSUMING PROBABILITIES HAVE ALREADY BEEN LOG-TRANSFORMED)!
+    /// Primarily for public use when creating models from .hmm files
+    ///
+    /// * `identifier`: 
+    /// * `emission`: 
+    /// * `prev_states`: 
+    /// * `prev_state_transitions`: 
+    pub fn new_with_logprob(
+        identifier: String,
+        emission: Option<Vec<f64>>,
+        prev_states: Vec<String>,
+        prev_state_transitions: Vec<f64>
+    ) -> Self {
         HMMState {
             identifier,
             emission: match emission {
                 None => HmmEmission::NoEmit,
-                Some(v) => HmmEmission::Emission(v.iter().map(|p| p.ln()).collect()),
+                Some(v) => HmmEmission::Emission(v),
             },
             prev_states,
-            prev_state_transitions: prev_state_transitions.iter().map(|p| p.ln()).collect(),
+            prev_state_transitions,
         }
+
     }
     pub fn empty_state(identifier: String) -> Self {
         HMMState {
@@ -48,6 +70,7 @@ impl HMMState {
     }
 }
 
+#[derive(Debug)]
 pub struct HMM {
     pub states: Vec<HMMState>,
 }
@@ -90,7 +113,7 @@ impl HMM {
         // First check that all states are constructed correctly
         for state in self.states.iter() {
             if state.prev_states.len() != state.prev_state_transitions.len() {
-                panic!("State {} does not have the same number of previous states as previous state transitions", state.identifier);
+                panic!("State {} does not have the same number of previous states as previous state transitions:\n{:?}", state.identifier, state);
             }
         }
         let all_identifiers: Vec<String> =
@@ -280,8 +303,8 @@ impl HMM {
                 sum = (d.iter().map(|p| p.exp()).sum::<f64>() * 1000.0).round() / 1000.0;
                 if sum != 1.0 {
                     panic!(
-                        "Emission probabilities for state {} sum to {}, not 1",
-                        state.identifier, sum
+                        "Emission probabilities for state {} sum to {}, not 1\n{:?}",
+                        state.identifier, sum, state
                     );
                 }
             }
@@ -301,8 +324,8 @@ impl HMM {
             sum = (row.iter().map(|p| p.exp()).sum::<f64>() * 1000.0).round() / 1000.0;
             if sum != 1.0 {
                 panic!(
-                    "Transition probabilities for state {} sum to {}, not 1",
-                    self.states[i].identifier, sum
+                    "Transition probabilities for state {} sum to {}, not 1\n{:?}",
+                    self.states[i].identifier, sum, self.states[i]
                 );
             }
         }

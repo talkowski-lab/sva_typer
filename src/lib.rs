@@ -3,3 +3,4 @@ pub mod hmm;
 pub mod utils;
 pub mod cli;
 pub mod sva;
+pub mod reader;
