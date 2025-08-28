@@ -2,7 +2,13 @@ use std::path::PathBuf;
 
 use crate::builder::{HMMBuildSettings, HMMBuildError};
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum SVAModelType {
+    Simple,
+    Complex
+}
 
 fn between_0_1_parser(s: &str) -> Result<f64> {
     let val: f64 = s.parse()?;
@@ -21,6 +27,12 @@ pub struct Args {
     /// Output file
     #[arg(short, long="output")]
     pub output_file: Option<PathBuf>,
+
+    #[arg(short, long, default_value_t=1)]
+    pub cores: u8,
+
+    #[arg(long, value_enum, default_value_t=SVAModelType::Simple)]
+    pub sva_model: SVAModelType,
     /// Probability of match state to match
     #[arg(
         long,
@@ -72,7 +84,7 @@ pub struct Args {
     /// Probability of loop repeating
     #[arg(
         long,
-        default_value_t = HMMBuildSettings::default().loop_prob,
+        default_value_t = HMMBuildSettings::default().enter_skip_loop,
         value_parser=between_0_1_parser,
         help_heading = "HMM Build Parameters",
 

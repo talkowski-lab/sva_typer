@@ -94,7 +94,7 @@ impl Default for HMMBuildSettings {
 }
 
 #[allow(non_snake_case)]
-pub fn create_HMM_from_motifs(motifs: Vec<&str>, motifnames: Vec<&str>, settings: &HMMBuildSettings, loop_name: &str) -> HMM {
+pub fn create_HMM_from_motifs(motifs: &[&str], motifnames: &[&str], settings: &HMMBuildSettings, loop_name: &str) -> HMM {
     
     let motif_hmms = zip(motifs, motifnames)
         .map(|(s, m)| create_pHMM(
@@ -423,8 +423,8 @@ mod tests {
         let settings = HMMBuildSettings::default();
 
         let hmm = create_HMM_from_motifs(
-            vec!["ACGTG", "GTAAG", "GAACT"],
-            vec!["Rep1", "Rep2", "Rep3"],
+            &["ACGTG", "GTAAG", "GAACT"],
+            &["Rep1", "Rep2", "Rep3"],
             &settings,
             "test"
         );
@@ -448,8 +448,8 @@ mod tests {
         let settings = HMMBuildSettings::default();
 
         let hmm = create_HMM_from_motifs(
-            vec!["ACG", "GTA", "TCC"],
-            vec!["Rep1", "Rep2", "Rep3"],
+            &["ACG", "GTA", "TCC"],
+            &["Rep1", "Rep2", "Rep3"],
             &settings,
             "test"
         );
@@ -469,8 +469,8 @@ mod tests {
         let motifs = vec!["ACGTGCGAT", "GTAACGAG", "GAAGCTACT"];
 
         let hmm = create_HMM_from_motifs(
-            motifs.clone(),
-            vec!["Rep1", "Rep2", "Rep3"],
+            &motifs,
+            &["Rep1", "Rep2", "Rep3"],
             &settings,
             "test"
         );
