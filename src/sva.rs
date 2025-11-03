@@ -15,12 +15,12 @@ const VNTR_REPEATS: &[&str] = &[
 // TODO: Are these starts 0-based or 1-based? (They are 0-based from the MSA file)
 const SVA_TYPES: &[(&str, &str, usize, usize, usize)] = &[
 
-    ("SVA_A", "test/DFAM_files/DF000001067.hmm", 70, 434, 886),
-    ("SVA_B", "test/DFAM_files/DF000001068.hmm", 70, 429, 882),
-    ("SVA_C", "test/DFAM_files/DF000001069.hmm", 70, 430, 883),
-    ("SVA_D", "test/DFAM_files/DF000001070.hmm", 70, 430, 884),
-    ("SVA_E", "test/DFAM_files/DF000001071.hmm", 70, 426, 879),
-    ("SVA_F", "test/DFAM_files/DF000001072.hmm", 70, 419, 872),
+    ("SVA_A", "ref/DF000001067.hmm", 70, 434, 886),
+    ("SVA_B", "ref/DF000001068.hmm", 70, 429, 882),
+    ("SVA_C", "ref/DF000001069.hmm", 70, 430, 883),
+    ("SVA_D", "ref/DF000001070.hmm", 70, 430, 884),
+    ("SVA_E", "ref/DF000001071.hmm", 70, 426, 879),
+    ("SVA_F", "ref/DF000001072.hmm", 70, 419, 872),
 
 ];
 
