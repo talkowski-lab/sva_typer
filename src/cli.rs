@@ -7,7 +7,8 @@ use clap::{Parser, ValueEnum};
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SVAModelType {
     Simple,
-    Complex
+    Complex,
+    ComplexAllFamilies
 }
 
 fn between_0_1_parser(s: &str) -> Result<f64> {

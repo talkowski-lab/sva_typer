@@ -49,7 +49,7 @@ pub fn gen_sva_model(settings: &HMMBuildSettings) -> HMM {
     append_HMM(vec![skip1, hexamer_hmm, skip2, vntr_hmm, skip3])
 }
 
-pub fn gen_sva_model_with_innerseq(settings: &HMMBuildSettings) -> HMM {
+pub fn gen_sva_model_with_innerseq_all_families(settings: &HMMBuildSettings) -> HMM {
     let hexamer_hmm = create_HMM_from_motifs(
         &[HEXAMER_REPEAT],
         &["hex"],
@@ -87,6 +87,43 @@ pub fn gen_sva_model_with_innerseq(settings: &HMMBuildSettings) -> HMM {
             }).collect::<Result<Vec<_>,_>>().unwrap_or_else(|e| panic!("{e}")),
         "SINE"
     );
+
+
+    let skip1 = create_skip_state(settings, Some("skip1"));
+    let skip2 = create_skip_state(settings, Some("skip2"));
+
+    append_HMM(vec![skip1, hexamer_hmm, alu_region, vntr_hmm, sine_region, skip2])
+}
+
+pub fn gen_sva_model_with_innerseq(settings: &HMMBuildSettings) -> HMM {
+    let hexamer_hmm = create_HMM_from_motifs(
+        &[HEXAMER_REPEAT],
+        &["hex"],
+        settings,
+        "hexamer_region"
+    );
+
+    let vntr_hmm = create_HMM_from_motifs(
+        VNTR_REPEATS,
+        &["VNTR_1", "VNTR_2", "VNTR_3"],
+        settings,
+        "VNTR_region"
+    );
+
+    let (elem_type, path, alu_start, alu_end, sine_start) = SVA_TYPES[0];
+
+    let alu_region = read_hmm_file(
+                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(path),
+                    Some(format!("{elem_type}_ALU").as_str()), 
+                    Some(alu_start), 
+                    Some(alu_end)).unwrap();
+
+    let sine_region = read_hmm_file(
+                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(path), 
+                    Some(format!("{elem_type}_SINE").as_str()), 
+                    Some(sine_start), 
+                    None
+    ).unwrap();
 
 
     let skip1 = create_skip_state(settings, Some("skip1"));
@@ -170,7 +207,7 @@ mod tests {
     #[test]
     fn complex_sva_test() {
         let settings = HMMBuildSettings::default();
-        let hmm = gen_sva_model_with_innerseq(&settings);
+        let hmm = gen_sva_model_with_innerseq_all_families(&settings);
         hmm.check_valid();
     }
 }

@@ -12,4 +12,32 @@ COPY . .
 
 RUN cargo install --path .
 
-CMD ["sva_typer"]
+# Now install conda
+RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
+    bash Miniforge3.sh -b -p "/opt/conda"
+
+RUN . "/opt/conda/etc/profile.d/conda.sh"
+# For mamba support also run the following command
+RUN . "/opt/conda/etc/profile.d/mamba.sh"
+
+ENV PATH="/opt/conda/bin:${PATH}"
+ARG PATH="/opt/conda/bin:${PATH}"
+
+RUN conda update -y -n base conda && \
+    conda install -y -c conda-forge conda-pack libmamba && \
+    conda config --set solver libmamba && \
+    conda clean --all --yes
+
+# copy other resources
+COPY ./environment.yml /
+# install conda packages
+RUN conda env create -f /environment.yml && conda clean -a
+ENV PATH="/opt/conda/envs/sva_typer/bin:${PATH}"
+
+# copy python scripts
+COPY scripts/* /scripts/
+
+# activate conda environment
+RUN echo "source activate seq_extract" > ~/.bashrc
+
+# CMD ["sva_typer"]

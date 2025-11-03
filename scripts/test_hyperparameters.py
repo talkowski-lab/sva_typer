@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 import numpy as np
 import subprocess
@@ -29,6 +30,11 @@ class HMMBuildSettings(NamedTuple):
 
 
 
+class HMMBenchmarkRun(NamedTuple):
+    in_fa: str
+    out_folder: str
+
+
 match_to_match_range = np.round(np.linspace(0.85, 0.95, 11, endpoint=True), 4)
 match_to_ins_range = np.round(np.linspace(0.01, 0.1, 10, endpoint=True), 4)
 ins_extend_range = np.round(np.linspace(0.01, 0.1, 10, endpoint=True), 4)
@@ -42,9 +48,17 @@ match_emit_correct_range = np.round(np.linspace(0.5, 0.95, 10, endpoint=True), 4
 np.random.seed(100)
 
 program = "cargo run --release -q --"
-in_file = "test/SVA_ref_core.fa"
 
-hyperparam_table = "test/hyper_param_test/hyperparam_table.txt"
+run = HMMBenchmarkRun(in_fa="test/benchmarking_seqs.fasta", out_folder="test/hyper_param_test/trio_benchmarking/")
+
+if not Path(run.in_fa).exists():
+    sys.exit("fasta file doesn't exist")
+
+if not Path(run.out_folder).exists():
+    Path(run.out_folder).mkdir()
+    
+
+hyperparam_table = f"{run.out_folder}/hyperparam_table.txt"
 meta_f = open(hyperparam_table, "w")
 meta_f.write("run\tmatch_to_match\tmatch_to_ins\tins_extend\tdel_extend\tloop_prob\tenter_skip_loop\tskip_to_skip\tmatch_emit_correct\n")
 
@@ -64,9 +78,9 @@ for i in range(N):
         match_emit_correct=np.random.choice(match_emit_correct_range)
     )
 
-    outfile = f"test/hyper_param_test/test_{i}.txt"
+    outfile = f"{run.out_folder}/test_{i}.txt"
     
-    command = f'{program} {in_file} {" ".join(settings.to_cli())} > {outfile} 2> /dev/null'
+    command = f'{program} {run.in_fa} {" ".join(settings.to_cli())} 2> /dev/null | python scripts/process_output.py - > {outfile}'
     subprocess.run(command, shell=True)
     meta_f.write(f"{i}\t{settings.match_to_match}\t{settings.match_to_ins}\t{settings.ins_extend}\t{settings.del_extend}\t{settings.loop_prob}\t{settings.enter_skip_loop}\t{settings.skip_to_skip}\t{settings.match_emit_correct}\n")
 meta_f.close()
@@ -75,14 +89,14 @@ meta_f.close()
 
 dfs = []
 for i in range(N):
-    outfile = f"test/hyper_param_test/test_{i}.txt"
+    outfile = f"{run.out_folder}/test_{i}.txt"
     df = pl.read_csv(outfile, separator='\t', raise_if_empty=False)
     if df.is_empty():
         continue
     dfs.append(df.with_columns(iteration=pl.lit(i)))
 
 total_df = pl.concat(dfs)
-total_df.write_csv('test/hyper_param_test/total_results.txt', separator='\t')
+total_df.write_csv('{run.out_folder}/total_results.txt', separator='\t')
 for i in range(N):
-    outfile = f"test/hyper_param_test/test_{i}.txt"
+    outfile = f"{run.out_folder}/test_{i}.txt"
     Path(outfile).unlink(missing_ok=True)

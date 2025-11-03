@@ -4,3 +4,4 @@ pub mod utils;
 pub mod cli;
 pub mod sva;
 pub mod reader;
+pub mod benchmarks;

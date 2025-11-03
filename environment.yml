@@ -1,0 +1,7 @@
+name: sva_typer
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.10
+  - polars=0.20

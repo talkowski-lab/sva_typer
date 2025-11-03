@@ -14,7 +14,8 @@ fn run(args: Args) -> Result<()> {
     let settings = HMMBuildSettings::try_from(&args)?;
     let hmm = match args.sva_model {
         SVAModelType::Simple => sva::gen_sva_model(&settings),
-        SVAModelType::Complex => sva::gen_sva_model_with_innerseq(&settings)
+        SVAModelType::Complex => sva::gen_sva_model_with_innerseq(&settings),
+        SVAModelType::ComplexAllFamilies => sva::gen_sva_model_with_innerseq_all_families(&settings)
     };
     sva::gen_sva_model(&settings);
 
