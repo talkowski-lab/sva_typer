@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{env, path::{Path, PathBuf}};
 
 use crate::hmm::HMM;
 use crate::builder::*;
@@ -15,12 +15,12 @@ const VNTR_REPEATS: &[&str] = &[
 // TODO: Are these starts 0-based or 1-based? (They are 0-based from the MSA file)
 const SVA_TYPES: &[(&str, &str, usize, usize, usize)] = &[
 
-    ("SVA_A", "ref/DF000001067.hmm", 70, 434, 886),
-    ("SVA_B", "ref/DF000001068.hmm", 70, 429, 882),
-    ("SVA_C", "ref/DF000001069.hmm", 70, 430, 883),
-    ("SVA_D", "ref/DF000001070.hmm", 70, 430, 884),
-    ("SVA_E", "ref/DF000001071.hmm", 70, 426, 879),
-    ("SVA_F", "ref/DF000001072.hmm", 70, 419, 872),
+    ("SVA_A", "DF000001067.hmm", 70, 434, 886),
+    ("SVA_B", "DF000001068.hmm", 70, 429, 882),
+    ("SVA_C", "DF000001069.hmm", 70, 430, 883),
+    ("SVA_D", "DF000001070.hmm", 70, 430, 884),
+    ("SVA_E", "DF000001071.hmm", 70, 426, 879),
+    ("SVA_F", "DF000001072.hmm", 70, 419, 872),
 
 ];
 
@@ -64,11 +64,13 @@ pub fn gen_sva_model_with_innerseq_all_families(settings: &HMMBuildSettings) -> 
         "VNTR_region"
     );
 
+    let hmm_dir = sva_hmm_dir();
+
     let alu_region = parallelize_HMM(
         SVA_TYPES.iter().map(
             |(elem_type, path, alu_start, alu_end, _sine_start)| {
                 read_hmm_file(
-                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(*path),
+                    &hmm_dir.join(*path),
                     Some(format!("{elem_type}_ALU").as_str()), 
                     Some(*alu_start), 
                     Some(*alu_end))
@@ -80,7 +82,7 @@ pub fn gen_sva_model_with_innerseq_all_families(settings: &HMMBuildSettings) -> 
         SVA_TYPES.iter().map(
             |(elem_type, path, _alu_start, _alu_end, sine_start)| {
                 read_hmm_file(
-                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(*path), 
+                    &hmm_dir.join(*path), 
                     Some(format!("{elem_type}_SINE").as_str()), 
                     Some(*sine_start), 
                     None)
@@ -112,14 +114,16 @@ pub fn gen_sva_model_with_innerseq(settings: &HMMBuildSettings) -> HMM {
 
     let (elem_type, path, alu_start, alu_end, sine_start) = SVA_TYPES[0];
 
+    let hmm_dir = sva_hmm_dir();
+
     let alu_region = read_hmm_file(
-                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(path),
+                    &hmm_dir.join(path),
                     Some(format!("{elem_type}_ALU").as_str()), 
                     Some(alu_start), 
                     Some(alu_end)).unwrap();
 
     let sine_region = read_hmm_file(
-                    &Path::new(env!("CARGO_MANIFEST_DIR")).join(path), 
+                    &hmm_dir.join(path), 
                     Some(format!("{elem_type}_SINE").as_str()), 
                     Some(sine_start), 
                     None
