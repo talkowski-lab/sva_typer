@@ -6,13 +6,7 @@ FROM rust:1.86
 #
 # RUN cd sva_typer && cargo install --path .
 
-WORKDIR /usr/src/sva_typer
-
-COPY . .
-
-RUN cargo install --path .
-
-# Now install conda
+# install conda
 RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
     bash Miniforge3.sh -b -p "/opt/conda"
 
@@ -28,11 +22,18 @@ RUN conda update -y -n base conda && \
     conda config --set solver libmamba && \
     conda clean --all --yes
 
+WORKDIR /usr/src/sva_typer
+
+COPY . .
+
+RUN cargo install --path .
+
 # copy other resources
 COPY ./environment.yml /
 # install conda packages
 RUN conda env create -f /environment.yml && conda clean -a
 ENV PATH="/opt/conda/envs/sva_typer/bin:${PATH}"
+ENV SVA_HMM_PATH="/usr/src/sva_typer/ref"
 
 # copy python scripts
 COPY scripts/* /scripts/
