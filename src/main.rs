@@ -3,11 +3,13 @@ use sva_typer::{
     builder::HMMBuildSettings,
     cli::{Args, SVAModelType}, 
     utils::*,
-    sva
+    sva,
+    hmm
 };
 use clap::Parser;
 use bio::{self, io::fasta::{self, FastaRead}};
 use rayon::prelude::*;
+
 
 fn run(args: Args) -> Result<()> {
     let mut reader = fasta::Reader::from_file(&args.file)?;
@@ -25,19 +27,28 @@ fn run(args: Args) -> Result<()> {
 
     if args.cores == 1 {
         let mut writer = open_write(args.output_file.as_deref())?;
-        writeln!(writer, "ID\tregion\tstart\tend")?;
+        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state)?;
         // TODO: Turn this into a parallel loop
         for (i, record) in reader.records().enumerate() {
             eprint!("Record {}\r", i);
             let record = record?;
             let query = std::str::from_utf8(record.seq()).unwrap().to_uppercase();
-            let result = hmm.query(&sequence_to_bytes(&query));
-            // sva::trim_loop_intervals(&mut result);
-            tsvprint_intervals(&mut writer,record.id(), result)?;
+            let (path, query_indexes) = hmm.query(&sequence_to_bytes(&query));
+            if args.write_hmm_state {
+                tsvprint_hmmstates(&mut writer, record.id(), &query, path, query_indexes)?;
+            } else {
+                let result = hmm::convert_to_intervals(path, query_indexes);
+                // sva::trim_loop_intervals(&mut result);
+                if args.write_query_seq_state {
+                    tsvprint_intervals_withseq(&mut writer, record.id(), &query, result)?;
+                } else {
+                    tsvprint_intervals(&mut writer,record.id(), result)?;
+                }
+            }
         }
     } else {
         let mut writer = open_write(args.output_file.as_deref())?;
-        writeln!(writer, "ID\tregion\tstart\tend")?;
+        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state)?;
         let mut total_i = 0;
 
         let mut record = fasta::Record::new();
@@ -63,7 +74,8 @@ fn run(args: Args) -> Result<()> {
             let results = batch.par_chunks(75).map(|vr| {
                 vr.iter().map(|r| {
                     let query = std::str::from_utf8(r.seq()).unwrap().to_uppercase();
-                    let result = hmm.query(&sequence_to_bytes(&query));
+                    let (path, query_indexes) = hmm.query(&sequence_to_bytes(&query));
+                    let result = hmm::convert_to_intervals(path, query_indexes);
                     result
                 }).collect::<Vec<_>>()
             }).flatten().collect::<Vec<_>>();

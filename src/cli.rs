@@ -32,6 +32,14 @@ pub struct Args {
     #[arg(short, long, default_value_t=1)]
     pub cores: u8,
 
+    /// Instead of the normal output write the full order state (note: this is primarily for testing purposes: the output file will get huge for a moderate number of input sequences)
+    #[arg(long, default_value_t=false)]
+    pub write_hmm_state: bool,
+
+    /// Write the sequence as an additional column in the internval output
+    #[arg(long, default_value_t=false)]
+    pub write_query_seq_state: bool,
+
     #[arg(long, value_enum, default_value_t=SVAModelType::Simple)]
     pub sva_model: SVAModelType,
 

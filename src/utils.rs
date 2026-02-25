@@ -1,7 +1,8 @@
 use std::{
     fs::File, 
     io::{self, BufWriter, Write}, 
-    path::Path
+    path::Path,
+    iter::zip
 };
 
 #[derive(Debug)]
@@ -31,11 +32,45 @@ pub fn pprint_intervals<T: Write>(writer: &mut T, intervals: Vec<(&str, Interval
     Ok(())
 }
 
-pub fn tsvprint_intervals<T: Write>(writer: &mut T, seqname: &str, intervals: Vec<(&str, Interval)>) -> io::Result<()> {
+pub fn write_header(writer: &mut impl Write, write_hmm_state: bool, write_query_seq: bool) -> io::Result<()> {
+    match write_hmm_state {
+        true => writeln!(writer, "ID\tstate\tquery_i\tquery_base"),
+        false => match write_query_seq {
+            true => writeln!(writer, "ID\tregion\tstart\tend\tseq"),
+            false => writeln!(writer, "ID\tregion\tstart\tend")
+        }
+    }
+}
+
+pub fn tsvprint_intervals(writer: &mut impl Write, seqname: &str, intervals: Vec<(&str, Interval)>) -> io::Result<()> {
     for (s, interval) in intervals {
         writeln!(writer, "{seqname}\t{s}\t{}\t{}", interval.start, interval.stop)?
     }
     Ok(())
+}
+
+pub fn tsvprint_intervals_withseq(writer: &mut impl Write, seqname: &str, query: &str, intervals: Vec<(&str, Interval)>) -> io::Result<()> {
+    for (s, interval) in intervals {
+        writeln!(writer, "{seqname}\t{s}\t{}\t{}\t{}", interval.start, interval.stop, &query[interval.start..interval.stop])?
+    }
+    Ok(())
+}
+
+pub fn tsvprint_hmmstates(writer: &mut impl Write, seqname: &str, query: &str, state_names: Vec<&str>, state_pos: Vec<usize>) -> io::Result<()> {
+    for (s, i) in zip(
+        state_names, 
+        state_pos.iter().map(|i| match i { 
+            // There's some funkiness because we had to add a fake start state to make the
+            // traceback work, but 0 and 1 are the same position, and everything else is minus 1
+            0 => 0,
+            _ => i-1
+        })
+    )  {
+            writeln!(writer, "{seqname}\t{s}\t{i}\t{}", query.chars().nth(i).unwrap())?
+    }
+    Ok(())
+
+
 }
 
 pub fn open_write(f: Option<&Path>) -> io::Result<Box<dyn Write>> {

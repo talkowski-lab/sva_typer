@@ -190,7 +190,7 @@ impl HMM {
     /// probabilities for the nonemitting states will get messed up. This is so self can be passed
     /// as a immutable reference making it easier for parallelization
     /// * `query`: 
-    pub fn query(&self, query: &[u8]) -> Vec<(&str, Interval)> {
+    pub fn query(&self, query: &[u8]) -> (Vec<&str>, Vec<usize>) {
     // pub fn query(&mut self, query: &[u8]) -> (Vec<&str>, Vec<usize>) {
         let start_state = self.get_start_states()[0];
         let end_state = self.get_end_states()[0];
@@ -199,9 +199,8 @@ impl HMM {
         let index_map = self.get_index_map();
         let (path, query_indexes) = self.traceback(&trace_mat, &index_map, start_state, end_state);
 
-        // (path, query_indexes)
+        (path, query_indexes)
 
-        convert_to_intervals(path, query_indexes)
     }
 
     fn gen_viterbi_mats(
@@ -380,7 +379,7 @@ impl Default for HMM {
 /// FYI: This functional heavily assumes the naming schema for states used throughout the building process
 /// * `state_names`: 
 /// * `state_pos`: 
-fn convert_to_intervals(state_names: Vec<&str>, state_pos: Vec<usize>) -> Vec<(&str, Interval)> {
+pub fn convert_to_intervals(state_names: Vec<&str>, state_pos: Vec<usize>) -> Vec<(&str, Interval)> {
     // This removes loop states by just assuming that "loop_start" and "loop_end" are in the names,
     // which might not always be true, just fyi
     let mut intervals = vec![];
