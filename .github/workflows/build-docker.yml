@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'scripts/**'
+      - '.github/workflows/build-docker.yml'
     branches:
       - main
 
@@ -22,15 +23,14 @@ jobs:
       - name: Log in to ghcr.io with docker
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
       
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
+        run: |
+          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_OUTPUT"
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push docker containers
         uses: docker/build-push-action@v6
@@ -38,4 +38,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.meta.outputs.tags }}
+            ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_CONTAINER_NAME }}:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_CONTAINER_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
