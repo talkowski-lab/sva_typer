@@ -81,12 +81,12 @@ impl HMMBuildSettings {
 impl Default for HMMBuildSettings {
     fn default() -> Self {
         HMMBuildSettings::new(
-            0.9, 
-            0.04,
+            0.999, 
+            0.0008,
             0.05, 
             0.1,
             0.9, 
-            0.05,
+            0.00001,
             0.9, 
             0.9
         ).unwrap()
