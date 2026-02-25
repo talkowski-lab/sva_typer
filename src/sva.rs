@@ -49,6 +49,46 @@ pub fn gen_sva_model(settings: &HMMBuildSettings) -> HMM {
     append_HMM(vec![skip1, hexamer_hmm, skip2, vntr_hmm, skip3])
 }
 
+pub fn gen_sva_model_with_custom_hexseq(settings: &HMMBuildSettings, hex_motifs: &[String]) -> HMM {
+
+    let motif_names = hex_motifs.iter()
+        .enumerate()
+        .map(|(i, _)| format!("hex_{}", i+1))
+        .collect::<Vec<_>>();
+
+    // I'm sure there's a less stupid way of doing this
+    let motif_names_ref = motif_names.iter().map(|s| s.as_str()).collect::<Vec<_>>();
+
+    let hexamer_hmm = create_HMM_from_motifs(
+        &hex_motifs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        &motif_names_ref,
+        settings,
+        "hexamer_region"
+    );
+
+    let vntr_hmm = create_HMM_from_motifs(
+        VNTR_REPEATS,
+        &["VNTR_1", "VNTR_2", "VNTR_3"],
+        settings,
+        "VNTR_region"
+    );
+
+    let skip1 = create_skip_state(settings, Some("skip1"));
+    let skip2 = create_skip_state(settings, Some("skip2"));
+    let skip3 = create_skip_state(settings, Some("skip3"));
+
+    append_HMM(vec![skip1, hexamer_hmm, skip2, vntr_hmm, skip3])
+}
+
+pub fn sva_hmm_dir() -> PathBuf {
+    if let Ok(dir) = env::var("SVA_HMM_PATH") {
+        PathBuf::from(dir)
+    } else {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ref")
+    }
+
+}
+
 pub fn gen_sva_model_with_innerseq_all_families(settings: &HMMBuildSettings) -> HMM {
     let hexamer_hmm = create_HMM_from_motifs(
         &[HEXAMER_REPEAT],

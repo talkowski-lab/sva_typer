@@ -13,10 +13,14 @@ fn run(args: Args) -> Result<()> {
     let mut reader = fasta::Reader::from_file(&args.file)?;
     let settings = HMMBuildSettings::try_from(&args)?;
     let hmm = match args.sva_model {
-        SVAModelType::Simple => sva::gen_sva_model(&settings),
+        SVAModelType::Simple => match args.hex_motifs {
+            Some(v) => sva::gen_sva_model_with_custom_hexseq(&settings, &v),
+            None => sva::gen_sva_model(&settings)
+        },
         SVAModelType::Complex => sva::gen_sva_model_with_innerseq(&settings),
         SVAModelType::ComplexAllFamilies => sva::gen_sva_model_with_innerseq_all_families(&settings)
     };
+
     sva::gen_sva_model(&settings);
 
     if args.cores == 1 {

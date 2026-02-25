@@ -34,6 +34,10 @@ pub struct Args {
 
     #[arg(long, value_enum, default_value_t=SVAModelType::Simple)]
     pub sva_model: SVAModelType,
+
+    /// Custom hexamer repeats with comma separated strings
+    #[arg(long, value_delimiter=',')]
+    pub hex_motifs: Option<Vec<String>>,
     /// Probability of match state to match
     #[arg(
         long,
