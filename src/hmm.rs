@@ -375,14 +375,17 @@ impl Default for HMM {
     }
 }
 
-/// Outputs 0-based intervals for the motif starts and stops
+/// Outputs 0-based half-open intervals for the motif starts and stops
 /// FYI: This functional heavily assumes the naming schema for states used throughout the building process
+/// Adds +1 to start and stop for intervals because the "start" and "end" states happen right
+/// BEFORE it changes, so the actual start and end for these intervals is the position after
 /// * `state_names`: 
 /// * `state_pos`: 
 pub fn convert_to_intervals(state_names: Vec<&str>, state_pos: Vec<usize>) -> Vec<(&str, Interval)> {
     // This removes loop states by just assuming that "loop_start" and "loop_end" are in the names,
     // which might not always be true, just fyi
     let mut intervals = vec![];
+    let mut start = true;
 
     for (s, i) in zip(
         state_names, 
@@ -393,16 +396,22 @@ pub fn convert_to_intervals(state_names: Vec<&str>, state_pos: Vec<usize>) -> Ve
             _ => i-1
         })
     )  {
-            if s.contains("_start") && !s.contains("_loop_start") {
-                intervals.push((s.strip_suffix("_start").unwrap(), Interval {start: i, stop: usize::MAX}))
+        if s.contains("_start") && !s.contains("_loop_start") {
+            if start {
+                intervals.push((s.strip_suffix("_start").unwrap(), Interval {start: 0, stop: usize::MAX}));
+                start = false;
+            } else {
+                intervals.push((s.strip_suffix("_start").unwrap(), Interval {start: i+1, stop: usize::MAX}));
             }
-            if s.contains("_end") && !s.contains("_loop_end") {
-                for (n, interval) in intervals.iter_mut() {
-                    if n == &s.strip_suffix("_end").unwrap() && interval.stop == usize::MAX {
-                        interval.stop = i
-                    }
+        }
+
+        if s.contains("_end") && !s.contains("_loop_end") {
+            for (n, interval) in intervals.iter_mut() {
+                if n == &s.strip_suffix("_end").unwrap() && interval.stop == usize::MAX {
+                    interval.stop = i+1;
                 }
             }
+        }
     }
     intervals
 }
