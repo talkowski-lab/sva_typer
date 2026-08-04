@@ -11,6 +11,13 @@ pub enum SVAModelType {
     ComplexAllFamilies
 }
 
+#[derive(PartialEq, Eq, ValueEnum, Clone, Debug)]
+pub enum HMMBehaviorN {
+    Fail,
+    Use,
+    Report
+}
+
 fn between_0_1_parser(s: &str) -> Result<f64> {
     let val: f64 = s.parse()?;
     if (0.0..=1.0).contains(&val) {
@@ -42,6 +49,9 @@ pub struct Args {
 
     #[arg(long, value_enum, default_value_t=SVAModelType::Simple)]
     pub sva_model: SVAModelType,
+
+    #[arg(long, value_enum, default_value_t=HMMBehaviorN::Fail)]
+    pub hmm_behavior_n: HMMBehaviorN,
 
     /// Custom hexamer repeats with comma separated strings
     #[arg(long, value_delimiter=',')]

@@ -1,10 +1,6 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use sva_typer::{
-    builder::HMMBuildSettings,
-    cli::{Args, SVAModelType}, 
-    utils::*,
-    sva,
-    hmm
+    builder::HMMBuildSettings, cli::{Args, HMMBehaviorN, SVAModelType}, hmm, sva, utils::*
 };
 use clap::Parser;
 use bio::{self, io::fasta::{self, FastaRead}};
@@ -23,16 +19,21 @@ fn run(args: Args) -> Result<()> {
         SVAModelType::ComplexAllFamilies => sva::gen_sva_model_with_innerseq_all_families(&settings)
     };
 
+
     sva::gen_sva_model(&settings);
+    let report_ns = (args.hmm_behavior_n == HMMBehaviorN::Report);
 
     if args.cores == 1 {
         let mut writer = open_write(args.output_file.as_deref())?;
-        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state)?;
+        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state, report_ns)?;
         // TODO: Turn this into a parallel loop
         for (i, record) in reader.records().enumerate() {
             eprint!("Record {}\r", i);
             let record = record?;
             let query = std::str::from_utf8(record.seq()).unwrap().to_uppercase();
+            if args.hmm_behavior_n == HMMBehaviorN::Fail && query.contains('N') {
+                bail!("Query sequences contains an N")
+            }
             let (path, query_indexes) = hmm.query(&sequence_to_bytes(&query));
             if args.write_hmm_state {
                 tsvprint_hmmstates(&mut writer, record.id(), &query, path, query_indexes)?;
@@ -40,15 +41,16 @@ fn run(args: Args) -> Result<()> {
                 let result = hmm::convert_to_intervals(path, query_indexes);
                 // sva::trim_loop_intervals(&mut result);
                 if args.write_query_seq_state {
-                    tsvprint_intervals_withseq(&mut writer, record.id(), &query, result)?;
+                    tsvprint_intervals_withseq(&mut writer, record.id(), &query, result, report_ns)?;
                 } else {
-                    tsvprint_intervals(&mut writer,record.id(), result)?;
+                    tsvprint_intervals(&mut writer,record.id(), &query, result, report_ns)?;
                 }
             }
         }
     } else {
+        bail!("Parallel threading is currently broken");
         let mut writer = open_write(args.output_file.as_deref())?;
-        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state)?;
+        write_header(&mut writer, args.write_hmm_state, args.write_query_seq_state, false)?;
         let mut total_i = 0;
 
         let mut record = fasta::Record::new();
@@ -82,7 +84,8 @@ fn run(args: Args) -> Result<()> {
 
 
             for (record, result )in std::iter::zip(batch, results) {
-                tsvprint_intervals(&mut writer,record.id(), result)?;
+                // FIXME: Allow query to be added into the batch for N reporting
+                //tsvprint_intervals(&mut writer,record.id(),  &query, result, false)?;
             }
         }
     }

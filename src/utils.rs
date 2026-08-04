@@ -32,26 +32,54 @@ pub fn pprint_intervals<T: Write>(writer: &mut T, intervals: Vec<(&str, Interval
     Ok(())
 }
 
-pub fn write_header(writer: &mut impl Write, write_hmm_state: bool, write_query_seq: bool) -> io::Result<()> {
+pub fn write_header(writer: &mut impl Write, write_hmm_state: bool, write_query_seq: bool, write_n_column: bool) -> io::Result<()> {
     match write_hmm_state {
         true => writeln!(writer, "ID\tstate\tquery_i\tquery_base"),
-        false => match write_query_seq {
-            true => writeln!(writer, "ID\tregion\tstart\tend\tseq"),
-            false => writeln!(writer, "ID\tregion\tstart\tend")
+        false => {
+            match write_query_seq {
+                true => write!(writer, "ID\tregion\tstart\tend\tseq")?,
+                false => write!(writer, "ID\tregion\tstart\tend")?
+            };
+            match write_n_column {
+                true => writeln!(writer, "\tN_count"),
+                false => writeln!(writer, "")
+            }
         }
     }
 }
 
-pub fn tsvprint_intervals(writer: &mut impl Write, seqname: &str, intervals: Vec<(&str, Interval)>) -> io::Result<()> {
-    for (s, interval) in intervals {
-        writeln!(writer, "{seqname}\t{s}\t{}\t{}", interval.start, interval.stop)?
+pub fn tsvprint_intervals(writer: &mut impl Write, seqname: &str, query: &str, intervals: Vec<(&str, Interval)>, write_n_column: bool) -> io::Result<()> {
+    match write_n_column {
+        true => {
+            for (s, interval) in intervals {
+                let n_count = &query[interval.start..interval.stop].chars().filter(|&b| b =='N').count();
+                writeln!(writer, "{seqname}\t{s}\t{}\t{}\t{}", interval.start, interval.stop, n_count)?
+            }
+
+        },
+        false => {
+            for (s, interval) in intervals {
+                writeln!(writer, "{seqname}\t{s}\t{}\t{}", interval.start, interval.stop)?
+            }
+        }
+
     }
     Ok(())
 }
 
-pub fn tsvprint_intervals_withseq(writer: &mut impl Write, seqname: &str, query: &str, intervals: Vec<(&str, Interval)>) -> io::Result<()> {
-    for (s, interval) in intervals {
-        writeln!(writer, "{seqname}\t{s}\t{}\t{}\t{}", interval.start, interval.stop, &query[interval.start..interval.stop])?
+pub fn tsvprint_intervals_withseq(writer: &mut impl Write, seqname: &str, query: &str, intervals: Vec<(&str, Interval)>, write_n_column: bool) -> io::Result<()> {
+    match write_n_column {
+        true => {
+            for (s, interval) in intervals {
+                let n_count = &query[interval.start..interval.stop].chars().filter(|&b| b =='N').count();
+                writeln!(writer, "{seqname}\t{s}\t{}\t{}\t{}\t{}", interval.start, interval.stop, &query[interval.start..interval.stop], n_count)?
+            }
+        },
+        false => {
+            for (s, interval) in intervals {
+                writeln!(writer, "{seqname}\t{s}\t{}\t{}\t{}", interval.start, interval.stop, &query[interval.start..interval.stop])?
+            }
+        }
     }
     Ok(())
 }
